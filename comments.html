@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviews · My Apps</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f5f5f5;
+      color: #111;
+      min-height: 100vh;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      background: #fff;
+      border-bottom: 1px solid #e8e8e8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0 1rem;
+      height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topnav-home {
+      text-decoration: none;
+      font-size: 0.82rem;
+      color: #555;
+      padding: 5px 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .topnav-home:hover { background: #f5f5f5; }
+    .topnav-title { font-size: 1rem; font-weight: 700; flex: 1; padding-left: 0.5rem; }
+    .topnav-count { font-size: 0.78rem; color: #888; }
+
+    /* ── Rating summary ── */
+    .summary-box {
+      background: #fff;
+      padding: 1.4rem 1.2rem 1rem;
+      border-bottom: 8px solid #f5f5f5;
+    }
+    .summary-top {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+    .big-score {
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .big-num {
+      font-size: 3.2rem;
+      font-weight: 900;
+      color: #111;
+      line-height: 1;
+    }
+    .big-stars { font-size: 1.1rem; color: #f0a030; margin-top: 4px; letter-spacing: 2px; }
+    .big-sub { font-size: 0.72rem; color: #999; margin-top: 3px; }
+
+    .bars { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .bar-row { display: flex; align-items: center; gap: 7px; font-size: 0.75rem; }
+    .bar-label { width: 36px; color: #555; flex-shrink: 0; font-size: 0.7rem; }
+    .bar-track {
+      flex: 1; height: 7px; background: #eee; border-radius: 4px; overflow: hidden;
+    }
+    .bar-fill { height: 100%; background: #f0a030; border-radius: 4px; transition: width 0.6s ease; }
+    .bar-fill.low { background: #ddd; }
+    .bar-pct { width: 28px; text-align: right; color: #999; flex-shrink: 0; }
+
+    /* ── Sort / filter tabs ── */
+    .sort-tabs {
+      background: #fff;
+      border-bottom: 1px solid #ebebeb;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+    .sort-tabs::-webkit-scrollbar { display: none; }
+    .stab {
+      padding: 10px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #999;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+    }
+    .stab.active { color: #111; border-bottom-color: #111; }
+
+    /* ── Write review button ── */
+    .write-bar {
+      background: #fff;
+      padding: 0.75rem 1rem;
+      border-bottom: 8px solid #f5f5f5;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .write-btn {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #fff;
+      background: #333;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .write-btn:hover { background: #111; }
+
+    /* ── Review cards ── */
+    .reviews-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .review-card {
+      background: #fff;
+      padding: 1.2rem 1rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .review-card:last-child { border-bottom: none; }
+
+    .rc-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+    .rc-avatar {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .rc-meta { flex: 1; }
+    .rc-name { font-size: 0.82rem; font-weight: 700; color: #333; }
+    .rc-date { font-size: 0.72rem; color: #bbb; margin-top: 1px; }
+    .rc-stars { color: #f0a030; font-size: 0.82rem; letter-spacing: 1px; }
+
+    .rc-body {
+      font-size: 0.875rem;
+      line-height: 1.65;
+      color: #222;
+      margin-bottom: 0.85rem;
+      word-break: keep-all;
+    }
+    .rc-body.collapsed { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .expand-btn {
+      font-size: 0.75rem;
+      color: #888;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    .expand-btn:hover { color: #333; }
+
+    .rc-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .helpful-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      color: #555;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .helpful-btn:hover { border-color: #aaa; color: #111; }
+    .helpful-btn.liked { background: #fff8e7; border-color: #f0a030; color: #c17d00; }
+
+    /* ── Write modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: #fff;
+      width: 100%; max-width: 640px;
+      border-radius: 20px 20px 0 0;
+      padding: 1.5rem 1.2rem;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-title { font-size: 1rem; font-weight: 800; margin-bottom: 1rem; }
+    .modal-stars {
+      display: flex; gap: 6px; margin-bottom: 1rem; align-items: center;
+    }
+    .modal-stars span { font-size: 0.8rem; color: #888; margin-right: 4px; }
+    .mstar { font-size: 1.6rem; background: none; border: none; cursor: pointer; transition: transform 0.1s; }
+    .mstar:hover { transform: scale(1.2); }
+    .modal textarea {
+      width: 100%; border: 1px solid #e0e0e0; border-radius: 10px;
+      padding: 12px; font-size: 0.875rem; font-family: inherit;
+      resize: none; height: 120px; outline: none; line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    .modal textarea:focus { border-color: #333; }
+    .modal textarea::placeholder { color: #ccc; }
+    .modal-anon {
+      display: flex; align-items: center; gap: 6px;
+      margin: 10px 0 14px;
+      font-size: 0.75rem; color: #888;
+    }
+    .anon-pill {
+      background: #f3f4f6; border-radius: 20px;
+      padding: 2px 10px; font-weight: 700; color: #555; font-size: 0.75rem;
+    }
+    .anon-refresh {
+      background: none; border: none; cursor: pointer;
+      color: #bbb; font-size: 0.85rem; transition: transform 0.3s;
+    }
+    .anon-refresh:hover { transform: rotate(180deg); color: #555; }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-cancel {
+      flex: 1; padding: 11px; border: 1px solid #ddd; border-radius: 8px;
+      background: none; font-size: 0.875rem; cursor: pointer; color: #555;
+    }
+    .modal-submit {
+      flex: 2; padding: 11px; border: none; border-radius: 8px;
+      background: #333; color: #fff; font-size: 0.875rem;
+      font-weight: 700; cursor: pointer; transition: background 0.15s;
+    }
+    .modal-submit:hover { background: #111; }
+    .modal-submit:disabled { background: #ccc; cursor: default; }
+
+    .empty-state {
+      text-align: center; padding: 4rem 1rem; color: #bbb;
+    }
+    .empty-state .ei { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .empty-state p { font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<div class="topnav">
+  <a class="topnav-home" href="index.html">← Home</a>
+  <span class="topnav-title">Reviews</span>
+  <span class="topnav-count" id="navCount"></span>
+</div>
+
+<!-- Rating summary -->
+<div class="summary-box">
+  <div class="summary-top">
+    <div class="big-score">
+      <div class="big-num" id="bigNum">—</div>
+      <div class="big-stars" id="bigStars">☆☆☆☆☆</div>
+      <div class="big-sub" id="bigSub">out of 5</div>
+    </div>
+    <div class="bars" id="barsContainer">
+      <div class="bar-row"><span class="bar-label">5 ★</span><div class="bar-track"><div class="bar-fill" id="b5" style="width:0%"></div></div><span class="bar-pct" id="p5">0%</span></div>
+      <div class="bar-row"><span class="bar-label">4 ★</span><div class="bar-track"><div class="bar-fill" id="b4" style="width:0%"></div></div><span class="bar-pct" id="p4">0%</span></div>
+      <div class="bar-row"><span class="bar-label">3 ★</span><div class="bar-track"><div class="bar-fill low" id="b3" style="width:0%"></div></div><span class="bar-pct" id="p3">0%</span></div>
+      <div class="bar-row"><span class="bar-label">2 ★</span><div class="bar-track"><div class="bar-fill low" id="b2" style="width:0%"></div></div><span class="bar-pct" id="p2">0%</span></div>
+      <div class="bar-row"><span class="bar-label">1 ★</span><div class="bar-track"><div class="bar-fill low" id="b1" style="width:0%"></div></div><span class="bar-pct" id="p1">0%</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Sort tabs -->
+<div class="sort-tabs">
+  <button class="stab active" onclick="setSort('best',this)">Best</button>
+  <button class="stab" onclick="setSort('recent',this)">Recent</button>
+  <button class="stab" onclick="setSort('5',this)">5 stars</button>
+  <button class="stab" onclick="setSort('4',this)">4 stars</button>
+  <button class="stab" onclick="setSort('low',this)">Low rating</button>
+  <button class="stab" onclick="setSort('mine',this)">My reviews</button>
+</div>
+
+<!-- Write button -->
+<div class="write-bar">
+  <button class="write-btn" onclick="openModal()">✏️ Write a Review</button>
+</div>
+
+<!-- Reviews list -->
+<div class="reviews-list" id="reviewsList">
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="ei">💬</div>
+    <p>No reviews yet. Be the first!</p>
+  </div>
+</div>
+
+<!-- Write modal -->
+<div class="modal-overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-title">Write a Review</div>
+    <div class="modal-stars">
+      <span>Rating</span>
+      <button class="mstar" onclick="setStar(1)">☆</button>
+      <button class="mstar" onclick="setStar(2)">☆</button>
+      <button class="mstar" onclick="setStar(3)">☆</button>
+      <button class="mstar" onclick="setStar(4)">☆</button>
+      <button class="mstar" onclick="setStar(5)">☆</button>
+    </div>
+    <textarea id="reviewText" placeholder="Share your experience with the app…" oninput="checkSubmit()"></textarea>
+    <div class="modal-anon">
+      Posting as <span class="anon-pill" id="anonPill">—</span>
+      <button class="anon-refresh" onclick="refreshAnon()">↻</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-submit" id="submitBtn" onclick="submitReview()" disabled>Post Review</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase;
+const sb = createClient(
+  'https://xgumdnnlikiksdhedllz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndW1kbm5saWtpa3NkaGVkbGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDQxMTgsImV4cCI6MjA5Mjk4MDExOH0.NMJUHruzUgE7PSNaYKRvqBWYKv9vN2lzOpDakZj4-JE'
+);
+
+const MY_NAME_KEY  = 'appMyName_v2';
+const MY_COLOR_KEY = 'appMyColor_v2';
+const MY_IDS_KEY   = 'appMyReviewIds';
+
+const adjs   = ['Happy','Silent','Bright','Cool','Swift','Lucky','Warm','Gentle','Bold','Clever','Quiet','Witty','Kind','Brave','Chill','Sunny','Calm','Sharp'];
+const nouns  = ['Panda','Fox','Otter','Bear','Tiger','Eagle','Whale','Wolf','Deer','Koala','Lynx','Crane','Seal','Hawk','Mole','Robin','Finch','Bison'];
+const colors = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#f97316','#ec4899','#14b8a6','#a855f7','#84cc16','#0ea5e9'];
+
+const SEEDS = [
+  { id:'s1', name:'CoolOtter#3847', color:'#10b981', stars:5, helpful:14, created_at: new Date(Date.now()-86400000*7).toISOString(), body: "I've been looking for a simple productivity app that just works offline without needing an account — and this is exactly it. The planner section is genuinely well thought out. I use the habit tracker every single morning now. It takes about 10 seconds to check off my habits and it keeps me accountable throughout the day. The design is clean without feeling empty, which is rare. Highly recommend to anyone who wants to stay organized without overcomplicating things." },
+  { id:'s2', name:'QuietFox#2210',  color:'#6366f1', stars:4, helpful:9,  created_at: new Date(Date.now()-86400000*5).toISOString(), body: "To-Do list is great — fast, simple, and it saves everything even after closing the browser. I like that I can have multiple separate lists instead of one big dump. The only thing I'd love is drag-and-drop to reorder tasks. Right now you have to delete and re-add if you want to change order. That's the only real friction I've hit. Otherwise it's solid and I use it every day." },
+  { id:'s3', name:'BraveWolf#5501', color:'#ef4444', stars:5, helpful:21, created_at: new Date(Date.now()-86400000*4).toISOString(), body: "Daily Inspiration has become my actual morning routine. I open it before I even check my messages. Some of the quotes are genuinely profound — not the recycled stuff you see everywhere. I especially appreciate that it remembers where you left off and which quotes you favorited. There's real thought put into the curation. If someone is feeling stuck or unmotivated, I would tell them to just open this app for five minutes." },
+  { id:'s4', name:'ChillDeer#9023', color:'#f97316', stars:3, helpful:4,  created_at: new Date(Date.now()-86400000*3).toISOString(), body: "Overall pretty good but the calendar in the planner feels a bit bare compared to the other sections. I can see events but adding context to specific days is a bit limited. The habit tracker and today view more than make up for it though. I think with a few more calendar features this would be a 5-star experience. Looking forward to see how it evolves." },
+  { id:'s5', name:'KindCrane#6614', color:'#14b8a6', stars:5, helpful:17, created_at: new Date(Date.now()-86400000*2).toISOString(), body: "What I appreciate most is that everything just works without an internet connection and without making an account. No email required, no password, no syncing issues. My data is mine and it stays on my computer. In a world where every app wants to sign you up for something, that alone makes this stand out. The UI is also genuinely beautiful — the dark gradient home screen feels premium." },
+  { id:'s6', name:'SunnyRobin#1182',color:'#a855f7', stars:4, helpful:6,  created_at: new Date(Date.now()-86400000).toISOString(),   body: "The projects section of the planner is really useful for tracking bigger goals. I have three ongoing projects and I can see their progress at a glance. I dock one star because I sometimes want to assign a due date to individual tasks within a project, not just a deadline for the whole project. But that's a fairly minor thing. The overall experience is smooth and I haven't run into any bugs." },
+];
+
+let reviews = [];
+let myName, myColor, selectedStars = 0, currentSort = 'best';
+
+function genName() {
+  return adjs[Math.floor(Math.random()*adjs.length)] +
+         nouns[Math.floor(Math.random()*nouns.length)] + '#' +
+         (Math.floor(1000+Math.random()*9000));
+}
+
+function loadAnon(regen) {
+  if (regen || !localStorage.getItem(MY_NAME_KEY)) {
+    myName  = genName();
+    myColor = colors[Math.floor(Math.random()*colors.length)];
+    localStorage.setItem(MY_NAME_KEY, myName);
+    localStorage.setItem(MY_COLOR_KEY, myColor);
+  } else {
+    myName  = localStorage.getItem(MY_NAME_KEY);
+    myColor = localStorage.getItem(MY_COLOR_KEY);
+  }
+  document.getElementById('anonPill').textContent = myName;
+}
+
+function refreshAnon() {
+  loadAnon(true);
+  const btn = document.querySelector('.anon-refresh');
+  btn.style.transform = 'rotate(180deg)';
+  setTimeout(() => btn.style.transform = '', 350);
+}
+
+function getMyIds() { return JSON.parse(localStorage.getItem(MY_IDS_KEY) || '[]'); }
+
+async function init() {
+  loadAnon();
+  const { data, error } = await sb.from('reviews').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('Supabase error:', error); return; }
+
+  if (!data || data.length === 0) {
+    const { error: seedErr } = await sb.from('reviews').insert(SEEDS);
+    if (!seedErr) {
+      const myIds = getMyIds();
+      reviews = SEEDS.map(r => dbToReview(r, myIds));
+    }
+  } else {
+    const myIds = getMyIds();
+    reviews = data.map(r => dbToReview(r, myIds));
+  }
+  render();
+}
+
+function dbToReview(r, myIds) {
+  return {
+    id: r.id, name: r.name, color: r.color || '#6366f1',
+    stars: r.stars, text: r.body, helpful: r.helpful || 0,
+    time: new Date(r.created_at).getTime(),
+    mine: myIds.includes(r.id)
+  };
+}
+
+function setStar(n) {
+  selectedStars = n;
+  document.querySelectorAll('.mstar').forEach((b,i) => b.textContent = i < n ? '⭐' : '☆');
+  checkSubmit();
+}
+
+function checkSubmit() {
+  const txt = document.getElementById('reviewText').value.trim();
+  document.getElementById('submitBtn').disabled = !(txt && selectedStars > 0);
+}
+
+function openModal()  { document.getElementById('overlay').classList.add('open'); }
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function overlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+async function submitReview() {
+  const txt = document.getElementById('reviewText').value.trim();
+  if (!txt || !selectedStars) return;
+  const id = 'r_' + Date.now();
+  const row = { id, name: myName, color: myColor, stars: selectedStars, body: txt, helpful: 0 };
+  const { error } = await sb.from('reviews').insert(row);
+  if (error) { console.error(error); return; }
+
+  const myIds = getMyIds();
+  myIds.push(id);
+  localStorage.setItem(MY_IDS_KEY, JSON.stringify(myIds));
+
+  reviews.push({ id, name: myName, color: myColor, stars: selectedStars, text: txt, time: Date.now(), helpful: 0, mine: true });
+  document.getElementById('reviewText').value = '';
+  selectedStars = 0; setStar(0);
+  closeModal();
+  setSort(currentSort, document.querySelector('.stab.active'));
+}
+
+async function toggleHelpful(id) {
+  const key = 'hl_' + id;
+  const rev = reviews.find(r => r.id === id);
+  if (!rev || rev.mine) return;
+  const already = localStorage.getItem(key);
+  const newCount = already ? Math.max(0, rev.helpful - 1) : rev.helpful + 1;
+  const { error } = await sb.from('reviews').update({ helpful: newCount }).eq('id', id);
+  if (!error) {
+    rev.helpful = newCount;
+    already ? localStorage.removeItem(key) : localStorage.setItem(key, '1');
+    const btn = document.querySelector(`[data-h="${id}"]`);
+    if (btn) {
+      btn.classList.toggle('liked', !already);
+      btn.innerHTML = `👍 Helpful (${rev.helpful})`;
+    }
+  }
+}
+
+function toggleExpand(id) {
+  const body = document.querySelector(`.rc-body[data-id="${id}"]`);
+  const btn  = document.querySelector(`.expand-btn[data-id="${id}"]`);
+  if (!body || !btn) return;
+  body.classList.toggle('collapsed');
+  btn.textContent = body.classList.contains('collapsed') ? 'See more ▾' : 'See less ▴';
+}
+
+function setSort(s, el) {
+  currentSort = s;
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  render();
+}
+
+function starsStr(n) { return '⭐'.repeat(n) + '☆'.repeat(5-n); }
+function initials(name) { return name.slice(0,2).toUpperCase(); }
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('en-US', {year:'numeric', month:'2-digit', day:'2-digit'});
+}
+
+function updateSummary() {
+  const n = reviews.length;
+  const avg = n ? reviews.reduce((s,r)=>s+r.stars,0)/n : 0;
+  document.getElementById('bigNum').textContent = n ? avg.toFixed(1) : '—';
+  const full = Math.round(avg);
+  document.getElementById('bigStars').textContent = '⭐'.repeat(full)+'☆'.repeat(5-full);
+  document.getElementById('navCount').textContent = n ? n+' reviews' : '';
+  document.getElementById('bigSub').textContent = n ? `out of 5  ·  ${n} reviews` : 'No reviews yet';
+  [5,4,3,2,1].forEach(s => {
+    const cnt = reviews.filter(r=>r.stars===s).length;
+    const pct = n ? Math.round(cnt/n*100) : 0;
+    document.getElementById('b'+s).style.width = pct+'%';
+    document.getElementById('p'+s).textContent = pct+'%';
+  });
+}
+
+function render() {
+  updateSummary();
+  let list = [...reviews];
+  if (currentSort==='5')       list = list.filter(r=>r.stars===5);
+  else if (currentSort==='4')  list = list.filter(r=>r.stars===4);
+  else if (currentSort==='low')  list = list.filter(r=>r.stars<=3);
+  else if (currentSort==='mine') list = list.filter(r=>r.mine);
+
+  if (currentSort==='best') list.sort((a,b) => b.helpful-a.helpful || b.time-a.time);
+  else list.sort((a,b) => b.time-a.time);
+
+  const container = document.getElementById('reviewsList');
+  container.querySelectorAll('.review-card').forEach(el=>el.remove());
+  document.getElementById('emptyState').style.display = list.length ? 'none' : 'block';
+
+  list.forEach(rev => {
+    const liked = !!localStorage.getItem('hl_'+rev.id);
+    const isLong = rev.text.length > 220;
+    const card = document.createElement('div');
+    card.className = 'review-card';
+    card.innerHTML = `
+      <div class="rc-header">
+        <div class="rc-avatar" style="background:${rev.color}">${initials(rev.name)}</div>
+        <div class="rc-meta">
+          <div class="rc-name">${rev.mine ? 'You ('+rev.name+')' : rev.name}</div>
+          <div class="rc-date">${starsStr(rev.stars)} &nbsp;${fmtDate(rev.time)}</div>
+        </div>
+      </div>
+      <div class="rc-body${isLong?' collapsed':''}" data-id="${rev.id}">${rev.text}</div>
+      ${isLong ? `<button class="expand-btn" data-id="${rev.id}" onclick="toggleExpand('${rev.id}')">See more ▾</button>` : ''}
+      <div class="rc-footer">
+        ${!rev.mine
+          ? `<button class="helpful-btn${liked?' liked':''}" data-h="${rev.id}" onclick="toggleHelpful('${rev.id}')">👍 Helpful (${rev.helpful})</button>`
+          : `<span style="font-size:0.72rem;color:#bbb">Your review</span>`}
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

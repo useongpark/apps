@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>To-Do List</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; min-height: 100vh; }
+.list-body { background: #f0e8d8; min-height: 100vh; }
+.list-header { background: white; padding: 0.9rem 1.5rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 2px 10px rgba(0,0,0,0.08); position: sticky; top: 0; z-index: 10; }
+.back-link { color: #aaa; text-decoration: none; font-size: 0.9rem; white-space: nowrap; }
+.back-link:hover { color: #555; }
+.list-header h1 { flex: 1; font-size: 1.3rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-layout { display: flex; min-height: calc(100vh - 57px); }
+.add-panel { width: 270px; min-width: 270px; background: white; padding: 1.4rem; box-shadow: 2px 0 10px rgba(0,0,0,0.07); display: flex; flex-direction: column; gap: 0.8rem; height: calc(100vh - 57px); position: sticky; top: 57px; overflow-y: auto; }
+.add-panel h2 { font-size: 1rem; color: #444; border-bottom: 2px solid #f0e8d8; padding-bottom: 0.6rem; }
+.add-panel textarea { width: 100%; padding: 10px; border: 2px solid #e8dfd0; border-radius: 8px; resize: vertical; font-family: inherit; font-size: 0.92rem; background: #fffef9; transition: border-color 0.2s; min-height: 80px; }
+.add-panel textarea:focus { outline: none; border-color: #f0a030; }
+.priority-buttons { display: flex; gap: 0.4rem; }
+.prio-btn { flex: 1; padding: 7px 4px; border: 2px solid #e0e0e0; border-radius: 7px; background: white; cursor: pointer; font-size: 0.72rem; font-weight: 700; transition: all 0.15s; }
+.prio-btn:hover { border-color: #bbb; }
+.prio-btn.active.prio-high { background: #ffe0d0; border-color: #ff6b3d; color: #c0392b; }
+.prio-btn.active.prio-medium { background: #fff8c0; border-color: #f5c518; color: #9a7000; }
+.prio-btn.active.prio-low { background: #d0f0d8; border-color: #4caf50; color: #1b6e20; }
+.add-task-btn { padding: 11px; background: #f0a030; color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.add-task-btn:hover { background: #d88f20; }
+.tasks-area { flex: 1; padding: 1.8rem; }
+.filter-bar { display: flex; gap: 0.6rem; margin-bottom: 1.4rem; flex-wrap: wrap; }
+.filter-btn { padding: 5px 14px; border: 2px solid #d0c8b8; border-radius: 20px; background: white; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #777; transition: all 0.15s; }
+.filter-btn:hover { border-color: #aaa; color: #444; }
+.filter-btn.active { background: #f0a030; border-color: #f0a030; color: white; }
+.task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1.2rem; }
+.task-card { border-radius: 4px; padding: 1rem; box-shadow: 3px 4px 10px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 0.6rem; min-height: 130px; transition: transform 0.15s, box-shadow 0.15s; position: relative; }
+.task-card:hover { transform: translateY(-3px); box-shadow: 4px 7px 14px rgba(0,0,0,0.18); }
+.note-high   { background: linear-gradient(160deg, #ffd5c2, #ffb8a0); border-top: 5px solid #ff6b3d; }
+.note-medium { background: linear-gradient(160deg, #fff8c0, #fff176); border-top: 5px solid #f5c518; }
+.note-low    { background: linear-gradient(160deg, #ccedce, #a8dbb0); border-top: 5px solid #4caf50; }
+.task-card.done { opacity: 0.55; }
+.task-card.done .task-text { text-decoration: line-through; color: #888; }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.task-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #555; margin-top: 1px; flex-shrink: 0; }
+.card-actions { display: flex; gap: 0.2rem; }
+.icon-btn { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 3px 5px; border-radius: 5px; opacity: 0.5; transition: opacity 0.15s, background 0.15s; line-height: 1; }
+.icon-btn:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+.task-text { flex: 1; font-size: 0.92rem; color: #2c2c2c; line-height: 1.45; word-break: break-word; }
+.inline-edit { width: 100%; border: 1px solid rgba(0,0,0,0.2); border-radius: 5px; padding: 5px; font-family: inherit; font-size: 0.92rem; background: rgba(255,255,255,0.55); resize: vertical; min-height: 60px; }
+.priority-select { font-size: 0.72rem; padding: 3px 6px; border-radius: 5px; border: 1px solid rgba(0,0,0,0.18); background: rgba(255,255,255,0.55); cursor: pointer; align-self: flex-start; font-weight: 600; }
+.empty-state { text-align: center; padding: 4rem 2rem; color: #bbb; }
+.empty-state .empty-icon { font-size: 3rem; display: block; margin-bottom: 1rem; }
+.empty-state p { color: #bbb; font-size: 1rem; margin-bottom: 0.4rem; }
+.empty-state .empty-hint { font-size: 0.88rem; color: #ccc; }
+  </style>
+</head>
+<body class="list-body">
+
+  <div class="list-header">
+    <a href="index.html" class="back-link">🏠</a>
+    <a href="todo.html" class="back-link">← To-Do</a>
+    <h1 id="listTitle">Loading...</h1>
+  </div>
+
+  <div class="list-layout">
+    <div class="add-panel">
+      <h2>Add a Task</h2>
+      <textarea id="taskText" placeholder="What needs to be done?"></textarea>
+      <div class="priority-buttons">
+        <button class="prio-btn prio-high"          onclick="setPriority('high')">🔴 High</button>
+        <button class="prio-btn prio-medium active"  onclick="setPriority('medium')">🟡 Medium</button>
+        <button class="prio-btn prio-low"            onclick="setPriority('low')">🟢 Low</button>
+      </div>
+      <button class="add-task-btn" onclick="addTask()">+ Add Task</button>
+    </div>
+
+    <div class="tasks-area">
+      <div class="filter-bar" id="filterBar" style="display:none">
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('high', this)">🔴 High</button>
+        <button class="filter-btn" onclick="setFilter('medium', this)">🟡 Medium</button>
+        <button class="filter-btn" onclick="setFilter('low', this)">🟢 Low</button>
+        <button class="filter-btn" onclick="setFilter('done', this)">✅ Done</button>
+      </div>
+      <div id="taskGrid" class="task-grid"></div>
+      <div id="emptyState" class="empty-state" style="display:none">
+        <span class="empty-icon">📋</span>
+        <p>No tasks here yet.</p>
+        <p class="empty-hint" id="emptyHint">Use the panel on the left to add your first task!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createClient } = supabase;
+    const sb = createClient(
+      'https://xgumdnnlikiksdhedllz.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndW1kbm5saWtpa3NkaGVkbGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDQxMTgsImV4cCI6MjA5Mjk4MDExOH0.NMJUHruzUgE7PSNaYKRvqBWYKv9vN2lzOpDakZj4-JE'
+    );
+
+    const params      = new URLSearchParams(window.location.search);
+    const listId      = params.get('id');
+    let   allTasks    = [];
+    let   activeFilter = 'all';
+    let   selectedPriority = 'medium';
+
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    async function init() {
+      if (!listId) { document.getElementById('listTitle').textContent = 'List not found'; return; }
+      const { data: list, error: le } = await sb.from('todo_lists').select('*').eq('id', listId).single();
+      if (le || !list) { document.getElementById('listTitle').textContent = 'List not found'; return; }
+      document.title = list.title;
+      document.getElementById('listTitle').textContent = list.title;
+      const { data: tasks, error: te } = await sb.from('todo_tasks')
+        .select('*').eq('list_id', listId).order('created_at', { ascending: true });
+      if (!te) allTasks = tasks || [];
+      render();
+    }
+
+    function setPriority(p) {
+      selectedPriority = p;
+      document.querySelectorAll('.prio-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.prio-${p}`).classList.add('active');
+    }
+
+    function setFilter(f, btn) {
+      activeFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function filtered() {
+      if (activeFilter === 'all')  return allTasks;
+      if (activeFilter === 'done') return allTasks.filter(t => t.done);
+      return allTasks.filter(t => t.priority === activeFilter && !t.done);
+    }
+
+    function render() {
+      const visible = filtered();
+      const grid    = document.getElementById('taskGrid');
+      const empty   = document.getElementById('emptyState');
+      document.getElementById('filterBar').style.display = allTasks.length > 0 ? 'flex' : 'none';
+      if (visible.length === 0) {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+        document.getElementById('emptyHint').textContent = activeFilter !== 'all'
+          ? 'Try a different filter.'
+          : 'Use the panel on the left to add your first task!';
+        return;
+      }
+      empty.style.display = 'none';
+      grid.innerHTML = visible.map(makeCard).join('');
+    }
+
+    function makeCard(task) {
+      const done = task.done;
+      return `
+        <div class="task-card note-${task.priority}${done ? ' done' : ''}" id="card-${task.id}">
+          <div class="card-top">
+            <input type="checkbox" class="task-checkbox" ${done ? 'checked' : ''}
+              onchange="toggleDone('${task.id}', this.checked)" />
+            <div class="card-actions">
+              <button class="icon-btn" onclick="startEdit('${task.id}')" title="Edit">✏️</button>
+              <button class="icon-btn" onclick="deleteTask('${task.id}')" title="Delete">🗑️</button>
+            </div>
+          </div>
+          <div class="task-text" id="text-${task.id}">${esc(task.text)}</div>
+          <select class="priority-select" onchange="changePriority('${task.id}', this.value)">
+            <option value="high"   ${task.priority==='high'   ? 'selected':''}>🔴 High</option>
+            <option value="medium" ${task.priority==='medium' ? 'selected':''}>🟡 Medium</option>
+            <option value="low"    ${task.priority==='low'    ? 'selected':''}>🟢 Low</option>
+          </select>
+        </div>`;
+    }
+
+    async function addTask() {
+      const text = document.getElementById('taskText').value.trim();
+      if (!text) { document.getElementById('taskText').focus(); return; }
+      const id = genId();
+      const row = { id, list_id: listId, text, priority: selectedPriority, done: false };
+      const { error } = await sb.from('todo_tasks').insert(row);
+      if (error) { console.error(error); return; }
+      allTasks.push({ ...row, created_at: new Date().toISOString() });
+      document.getElementById('taskText').value = '';
+      render();
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) addTask();
+    });
+
+    async function toggleDone(id, done) {
+      const t = allTasks.find(t => t.id === id);
+      if (!t) return;
+      t.done = done;
+      await sb.from('todo_tasks').update({ done }).eq('id', id);
+      const card = document.getElementById(`card-${id}`);
+      if (card) done ? card.classList.add('done') : card.classList.remove('done');
+    }
+
+    function startEdit(id) {
+      const el = document.getElementById(`text-${id}`);
+      const current = el.textContent;
+      el.innerHTML = `<textarea class="inline-edit">${esc(current)}</textarea>`;
+      const ta = el.querySelector('textarea');
+      ta.focus();
+      ta.addEventListener('blur',    () => saveEdit(id, ta));
+      ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.blur(); } });
+    }
+
+    async function saveEdit(id, ta) {
+      const newText = ta.value.trim();
+      const t = allTasks.find(t => t.id === id);
+      if (t && newText) {
+        t.text = newText;
+        await sb.from('todo_tasks').update({ text: newText }).eq('id', id);
+      }
+      render();
+    }
+
+    async function changePriority(id, priority) {
+      const t = allTasks.find(t => t.id === id);
+      if (t) {
+        t.priority = priority;
+        await sb.from('todo_tasks').update({ priority }).eq('id', id);
+      }
+      const card = document.getElementById(`card-${id}`);
+      if (card) card.className = card.className.replace(/note-(high|medium|low)/, `note-${priority}`);
+    }
+
+    async function deleteTask(id) {
+      if (!confirm('Delete this task?')) return;
+      const { error } = await sb.from('todo_tasks').delete().eq('id', id);
+      if (error) { console.error(error); return; }
+      allTasks = allTasks.filter(t => t.id !== id);
+      render();
+    }
+
+    init();
+  </script>
+</body>
+</html>

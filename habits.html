@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planner — Habits</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+:root { --primary:#f0a030; --primary-dark:#d88f20; --bg:#f0e8d8; --card:white; --text:#2c2c2c; --text-sm:#777; --text-muted:#bbb; --border:#ece4d4; --danger:#e74c3c; --success:#27ae60; --shadow:0 3px 14px rgba(0,0,0,0.07); --radius:14px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
+.nav-bar { background: white; display: flex; align-items: center; padding: 0 1.5rem; height: 56px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); position: sticky; top: 0; z-index: 100; gap: 1.5rem; }
+.nav-brand { font-size: 1.05rem; font-weight: 800; color: var(--text); white-space: nowrap; }
+.nav-links { display: flex; gap: 0.2rem; flex: 1; align-items: center; }
+.nav-link { padding: 6px 13px; border-radius: 8px; text-decoration: none; color: var(--text-sm); font-size: 0.86rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+.nav-link:hover { background: #f5f0e8; color: var(--text); }
+.nav-link.active { background: var(--primary); color: white; }
+.nav-todo { margin-left: auto; border: 1.5px solid #eee; color: #aaa; }
+.nav-todo:hover { border-color: #ddd; color: var(--text); background: #fafafa; }
+.nav-home { border: 1.5px solid #eee; color: #aaa; }
+.nav-home:hover { border-color: #ddd; color: var(--text); background: #fafafa; }
+.page { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+.card { background: var(--card); border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow); }
+.btn { padding: 9px 20px; border-radius: 9px; border: none; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text-sm); }
+.btn-ghost:hover { border-color: #bbb; color: var(--text); }
+.btn-icon { padding: 4px 7px; background: none; border: none; cursor: pointer; opacity: 0.4; font-size: 0.88rem; border-radius: 6px; transition: all 0.15s; line-height: 1; }
+.btn-icon:hover { opacity: 1; background: rgba(0,0,0,0.07); }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-sm); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input { width: 100%; padding: 9px 12px; border: 2px solid var(--border); border-radius: 9px; font-size: 0.92rem; font-family: inherit; background: #fffef9; transition: border-color 0.2s; }
+.form-group input:focus { outline: none; border-color: var(--primary); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal { background: white; border-radius: 18px; padding: 1.8rem; width: 100%; max-width: 440px; box-shadow: 0 24px 64px rgba(0,0,0,0.18); }
+.modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.4rem; }
+.modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.3rem; flex-wrap: wrap; }
+.habit-card { background: white; border-radius: var(--radius); padding: 1rem 1.2rem; box-shadow: var(--shadow); display: flex; align-items: center; gap: 0.9rem; margin-bottom: 0.7rem; }
+.habit-check { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--border); background: white; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.88rem; font-weight: 700; color: white; transition: all 0.2s; }
+.habit-check.done { background: var(--success); border-color: var(--success); }
+.habit-name { font-weight: 700; font-size: 0.95rem; flex: 1; }
+.streak-badge { font-size: 0.73rem; font-weight: 700; color: #c67a00; background: #fff3e0; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.streak-zero { color: var(--text-muted); background: #f5f5f5; }
+.week-grid { display: flex; gap: 4px; }
+.week-cell { width: 22px; height: 22px; border-radius: 6px; font-size: 0.62rem; font-weight: 700; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--text-muted); }
+.week-dot-inner { width: 10px; height: 10px; border-radius: 50%; background: #ece4d4; }
+.week-dot-inner.done { background: var(--success); }
+.week-dot-inner.today { background: var(--primary); }
+.empty-msg { color: var(--text-muted); font-size: 0.86rem; padding: 1.4rem 0; text-align: center; line-height: 1.8; }
+@media (max-width: 680px) { .nav-brand { display: none; } }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+    <div>
+      <h1 style="font-size:1.5rem;font-weight:800">Habits</h1>
+      <p style="font-size:0.85rem;color:var(--text-sm);margin-top:0.2rem">Build streaks by checking in every day.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Habit</button>
+  </div>
+  <div id="habitList"></div>
+</div>
+
+<div class="modal-overlay" id="addModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">✅ New Habit</div>
+    <div class="form-group">
+      <label>Habit Name</label>
+      <input type="text" id="habitName" placeholder="e.g. Exercise, Read 20 min, Deep work..." />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost"   onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="addHabit()">Add Habit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase;
+const sb = createClient(
+  'https://xgumdnnlikiksdhedllz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndW1kbm5saWtpa3NkaGVkbGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDQxMTgsImV4cCI6MjA5Mjk4MDExOH0.NMJUHruzUgE7PSNaYKRvqBWYKv9vN2lzOpDakZj4-JE'
+);
+
+function renderNav(active) {
+  const links = [
+    { href: 'planner.html',  id: 'today',    icon: '🏠', label: 'Today' },
+    { href: 'calendar.html', id: 'calendar', icon: '📅', label: 'Calendar' },
+    { href: 'projects.html', id: 'projects', icon: '🎯', label: 'Projects' },
+    { href: 'habits.html',   id: 'habits',   icon: '✅', label: 'Habits' },
+  ];
+  document.getElementById('nav').innerHTML = `
+    <div class="nav-bar">
+      <div class="nav-brand">🗓️ Planner</div>
+      <div class="nav-links">
+        ${links.map(l=>`<a href="${l.href}" class="nav-link${l.id===active?' active':''}">${l.icon} ${l.label}</a>`).join('')}
+        <a href="todo.html" class="nav-link nav-todo">📋 To-Do ↗</a>
+        <a href="index.html" class="nav-link nav-home">🏠 Home</a>
+      </div>
+    </div>`;
+}
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function dateToStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let habitsData = [];
+let logSet = new Set(); // "habitId:date"
+
+function isHabitDone(hid, date) { return logSet.has(`${hid}:${date}`); }
+
+async function setHabitDone(hid, date, done) {
+  if (done) {
+    logSet.add(`${hid}:${date}`);
+    await sb.from('habit_logs').upsert({ habit_id: hid, date });
+  } else {
+    logSet.delete(`${hid}:${date}`);
+    await sb.from('habit_logs').delete().eq('habit_id', hid).eq('date', date);
+  }
+}
+
+function getStreak(hid) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tk = dateToStr(today), td = isHabitDone(hid, tk);
+  let s = 0, i = td ? 0 : 1;
+  while (i < 365) {
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    if (isHabitDone(hid, dateToStr(d))) { s++; i++; } else break;
+  }
+  return s;
+}
+</script>
+<script>
+  renderNav('habits');
+  const TODAY = todayStr();
+
+  function getLast7() {
+    const days=[], now=new Date();
+    for (let i=6;i>=0;i--) { const d=new Date(now); d.setDate(d.getDate()-i); days.push({str:dateToStr(d),label:d.toLocaleDateString('en-US',{weekday:'short'}).slice(0,1),isToday:i===0}); }
+    return days;
+  }
+
+  function render() {
+    const el=document.getElementById('habitList'), days=getLast7();
+    if (!habitsData.length) {
+      el.innerHTML=`<div class="card" style="text-align:center;padding:3rem"><div style="font-size:2.5rem;margin-bottom:0.8rem">✅</div><div style="font-weight:700;font-size:1rem;margin-bottom:0.4rem">No habits yet</div><div style="color:var(--text-sm);font-size:0.88rem;margin-bottom:1.2rem">Add a habit and start building your streak!</div><button class="btn btn-primary" onclick="openAddModal()">+ Add First Habit</button></div>`;
+      return;
+    }
+    el.innerHTML = habitsData.map(h => {
+      const done=isHabitDone(h.id,TODAY), streak=getStreak(h.id), total=days.filter(d=>isHabitDone(h.id,d.str)).length;
+      const weekCells=days.map(d=>{const isDone=isHabitDone(h.id,d.str);return`<div class="week-cell"><span style="font-size:0.6rem;color:${d.isToday?'var(--primary)':'var(--text-muted)'};font-weight:${d.isToday?'800':'600'}">${d.label}</span><div class="week-dot-inner ${isDone?(d.isToday?'today':'done'):''}"></div></div>`;}).join('');
+      return `<div class="habit-card">
+        <div class="habit-check ${done?'done':''}" onclick="toggle('${h.id}',${done})">${done?'✓':''}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem">
+            <span class="habit-name${done?'" style="text-decoration:line-through;color:var(--text-muted)':''}">${esc(h.name)}</span>
+            <span class="streak-badge${streak===0?' streak-zero':''}">${streak>1?'🔥 ':''}${streak} day streak</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.8rem">
+            <div class="week-grid">${weekCells}</div>
+            <span style="font-size:0.72rem;color:var(--text-muted)">${total}/7 this week</span>
+          </div>
+        </div>
+        <button class="btn-icon" onclick="deleteHabit('${h.id}')" title="Delete habit">🗑️</button>
+      </div>`;
+    }).join('');
+  }
+
+  async function toggle(hid, wasDone) {
+    await setHabitDone(hid, TODAY, !wasDone);
+    render();
+  }
+
+  async function deleteHabit(id) {
+    if (!confirm('Delete this habit? Your streak history will be lost.')) return;
+    const { error } = await sb.from('habits').delete().eq('id', id);
+    if (error) { console.error(error); return; }
+    habitsData = habitsData.filter(h => h.id !== id);
+    render();
+  }
+
+  function openAddModal() { document.getElementById('habitName').value=''; document.getElementById('addModal').style.display='flex'; setTimeout(()=>document.getElementById('habitName').focus(),50); }
+  function closeAddModal() { document.getElementById('addModal').style.display='none'; }
+
+  async function addHabit() {
+    const name = document.getElementById('habitName').value.trim();
+    if (!name) { document.getElementById('habitName').focus(); return; }
+    const id = genId();
+    const { error } = await sb.from('habits').insert({ id, name });
+    if (error) { console.error(error); return; }
+    habitsData.push({ id, name, created_at: new Date().toISOString() });
+    closeAddModal();
+    render();
+  }
+
+  document.getElementById('habitName').addEventListener('keydown',e=>{if(e.key==='Enter')addHabit();});
+  document.getElementById('addModal').addEventListener('click',e=>{if(e.target.id==='addModal')closeAddModal();});
+
+  (async () => {
+    const [{ data: habits }, { data: logs }] = await Promise.all([
+      sb.from('habits').select('*').order('created_at', { ascending: true }),
+      sb.from('habit_logs').select('habit_id,date')
+    ]);
+    habitsData = habits || [];
+    logSet = new Set((logs || []).map(l => `${l.habit_id}:${l.date}`));
+    render();
+  })();
+</script>
+</body>
+</html>

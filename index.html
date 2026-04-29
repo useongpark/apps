@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Apps</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: #7c3aed;
+      top: -120px; left: -100px;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: #f0a030;
+      bottom: -100px; right: -80px;
+    }
+
+    .hero { position: relative; z-index: 1; text-align: center; margin-bottom: 3rem; }
+    .hero-icon { font-size: 3.2rem; display: block; margin-bottom: 0.8rem; }
+    h1 { font-size: 2rem; font-weight: 800; color: white; margin-bottom: 0.4rem; letter-spacing: -0.5px; }
+    p  { color: rgba(255,255,255,0.45); font-size: 0.9rem; }
+
+    .apps { position: relative; z-index: 1; display: flex; gap: 1.2rem; flex-wrap: wrap; justify-content: center; }
+
+    .app-card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 22px;
+      padding: 2rem 2.2rem;
+      text-align: center;
+      text-decoration: none;
+      color: white;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+      min-width: 190px;
+    }
+    .app-card:hover {
+      transform: translateY(-6px);
+      background: rgba(255,255,255,0.14);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+    }
+
+    .app-icon { font-size: 2.8rem; display: block; margin-bottom: 0.9rem; }
+    .app-name { font-size: 1.05rem; font-weight: 800; margin-bottom: 0.35rem; }
+    .app-desc { font-size: 0.8rem; color: rgba(255,255,255,0.5); line-height: 1.4; }
+
+    /* Small reviews button — bottom-right edge */
+    .reviews-btn {
+      position: fixed;
+      bottom: 1.4rem;
+      right: 1.4rem;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 6px 12px 6px 10px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      font-size: 0.75rem;
+      font-weight: 600;
+      transition: background 0.2s, color 0.2s;
+    }
+    .reviews-btn:hover {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+    }
+    .reviews-btn .rb-icon { font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <span class="hero-icon">🌟</span>
+    <h1>My Apps</h1>
+    <p>Choose an app to get started</p>
+  </div>
+  <div class="apps">
+    <a class="app-card" href="todo.html">
+      <span class="app-icon">🗒️</span>
+      <div class="app-name">To-Do Lists</div>
+      <div class="app-desc">Create and manage your task lists</div>
+    </a>
+    <a class="app-card" href="planner.html">
+      <span class="app-icon">🗓️</span>
+      <div class="app-name">Planner</div>
+      <div class="app-desc">Habits, projects, calendar &amp; deadlines</div>
+    </a>
+    <a class="app-card" href="inspiration.html">
+      <span class="app-icon">✨</span>
+      <div class="app-name">Daily Inspiration</div>
+      <div class="app-desc">A new quote every day to keep you going</div>
+    </a>
+  </div>
+
+  <a class="reviews-btn" href="comments.html">
+    <span class="rb-icon">⭐</span> Reviews
+  </a>
+</body>
+</html>

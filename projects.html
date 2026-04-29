@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planner — Projects</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+:root { --primary:#f0a030; --primary-dark:#d88f20; --bg:#f0e8d8; --card:white; --text:#2c2c2c; --text-sm:#777; --text-muted:#bbb; --border:#ece4d4; --danger:#e74c3c; --success:#27ae60; --shadow:0 3px 14px rgba(0,0,0,0.07); --radius:14px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); min-height: 100vh; color: var(--text); }
+.nav-bar { background: white; display: flex; align-items: center; padding: 0 1.5rem; height: 56px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); position: sticky; top: 0; z-index: 100; gap: 1.5rem; }
+.nav-brand { font-size: 1.05rem; font-weight: 800; color: var(--text); white-space: nowrap; }
+.nav-links { display: flex; gap: 0.2rem; flex: 1; align-items: center; }
+.nav-link { padding: 6px 13px; border-radius: 8px; text-decoration: none; color: var(--text-sm); font-size: 0.86rem; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+.nav-link:hover { background: #f5f0e8; color: var(--text); }
+.nav-link.active { background: var(--primary); color: white; }
+.nav-todo { margin-left: auto; border: 1.5px solid #eee; color: #aaa; }
+.nav-todo:hover { border-color: #ddd; color: var(--text); background: #fafafa; }
+.nav-home { border: 1.5px solid #eee; color: #aaa; }
+.nav-home:hover { border-color: #ddd; color: var(--text); background: #fafafa; }
+.page { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }
+.card { background: var(--card); border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow); }
+.btn { padding: 9px 20px; border-radius: 9px; border: none; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-ghost { background: none; border: 1.5px solid var(--border); color: var(--text-sm); }
+.btn-ghost:hover { border-color: #bbb; color: var(--text); }
+.btn-sm { padding: 5px 12px; font-size: 0.8rem; border-radius: 7px; }
+.btn-icon { padding: 4px 7px; background: none; border: none; cursor: pointer; opacity: 0.4; font-size: 0.88rem; border-radius: 6px; transition: all 0.15s; line-height: 1; }
+.btn-icon:hover { opacity: 1; background: rgba(0,0,0,0.07); }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-sm); margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 9px 12px; border: 2px solid var(--border); border-radius: 9px; font-size: 0.92rem; font-family: inherit; background: #fffef9; transition: border-color 0.2s; }
+.form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.modal { background: white; border-radius: 18px; padding: 1.8rem; width: 100%; max-width: 440px; box-shadow: 0 24px 64px rgba(0,0,0,0.18); }
+.modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.4rem; }
+.modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 1.3rem; flex-wrap: wrap; }
+.color-picker { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.color-swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.15s; }
+.color-swatch:hover { transform: scale(1.2); }
+.color-swatch.selected { border-color: white; box-shadow: 0 0 0 2.5px #555; }
+.project-card { background: white; border-radius: var(--radius); padding: 1.3rem; box-shadow: var(--shadow); margin-bottom: 1rem; border-left: 5px solid var(--primary); }
+.project-header { display: flex; align-items: flex-start; gap: 0.7rem; margin-bottom: 0.7rem; }
+.project-name { font-size: 1.05rem; font-weight: 700; flex: 1; }
+.project-desc { font-size: 0.82rem; color: var(--text-sm); margin-bottom: 0.7rem; line-height: 1.4; }
+.project-meta { font-size: 0.75rem; color: var(--text-sm); display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.progress-track { height: 7px; background: #f0ebe0; border-radius: 10px; overflow: hidden; margin-bottom: 0.8rem; }
+.progress-fill { height: 100%; background: var(--primary); border-radius: 10px; transition: width 0.4s; }
+.milestone-list { border-top: 1px solid #f5f0e8; padding-top: 0.8rem; margin-top: 0.3rem; }
+.milestone-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px solid #faf7f2; }
+.milestone-row:last-child { border-bottom: none; }
+.milestone-cb { width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
+.milestone-text { flex: 1; font-size: 0.88rem; }
+.milestone-text.done-text { text-decoration: line-through; color: var(--text-muted); }
+.due-overdue { color: var(--danger); font-weight: 700; font-size: 0.73rem; }
+.due-today   { color: var(--primary); font-weight: 700; font-size: 0.73rem; }
+.due-soon    { color: #e67e22; font-weight: 600; font-size: 0.73rem; }
+.due-normal  { color: var(--text-muted); font-size: 0.73rem; }
+.empty-msg { color: var(--text-muted); font-size: 0.86rem; padding: 1.4rem 0; text-align: center; line-height: 1.8; }
+@media (max-width: 680px) { .nav-brand { display: none; } }
+  </style>
+</head>
+<body>
+<div id="nav"></div>
+
+<div class="page">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+    <div>
+      <h1 style="font-size:1.5rem;font-weight:800">Projects</h1>
+      <p style="font-size:0.85rem;color:var(--text-sm);margin-top:0.2rem">Track milestones and deadlines.</p>
+    </div>
+    <button class="btn btn-primary" onclick="openProjectModal()">+ New Project</button>
+  </div>
+  <div id="projectList"></div>
+</div>
+
+<div class="modal-overlay" id="projectModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title" id="projectModalTitle">🎯 New Project</div>
+    <div class="form-group"><label>Project Name</label><input type="text" id="projName" placeholder="e.g. Website Redesign, Q2 Report..." /></div>
+    <div class="form-group"><label>Description (optional)</label><textarea id="projDesc" rows="2" placeholder="What is this project about?"></textarea></div>
+    <div class="form-group"><label>Due Date (optional)</label><input type="date" id="projDue" /></div>
+    <div class="form-group"><label>Color</label><div class="color-picker" id="colorPicker"></div></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeProjectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="milestoneModal" style="display:none">
+  <div class="modal">
+    <div class="modal-title">🏁 Add Milestone</div>
+    <div class="form-group"><label>Milestone</label><input type="text" id="msText" placeholder="e.g. Finish design mockups..." /></div>
+    <div class="form-group"><label>Due Date (optional)</label><input type="date" id="msDue" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost"   onclick="closeMilestoneModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMilestone()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase;
+const sb = createClient(
+  'https://xgumdnnlikiksdhedllz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhndW1kbm5saWtpa3NkaGVkbGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDQxMTgsImV4cCI6MjA5Mjk4MDExOH0.NMJUHruzUgE7PSNaYKRvqBWYKv9vN2lzOpDakZj4-JE'
+);
+
+function renderNav(active) {
+  const links = [
+    { href: 'planner.html',  id: 'today',    icon: '🏠', label: 'Today' },
+    { href: 'calendar.html', id: 'calendar', icon: '📅', label: 'Calendar' },
+    { href: 'projects.html', id: 'projects', icon: '🎯', label: 'Projects' },
+    { href: 'habits.html',   id: 'habits',   icon: '✅', label: 'Habits' },
+  ];
+  document.getElementById('nav').innerHTML = `
+    <div class="nav-bar">
+      <div class="nav-brand">🗓️ Planner</div>
+      <div class="nav-links">
+        ${links.map(l=>`<a href="${l.href}" class="nav-link${l.id===active?' active':''}">${l.icon} ${l.label}</a>`).join('')}
+        <a href="todo.html" class="nav-link nav-todo">📋 To-Do ↗</a>
+        <a href="index.html" class="nav-link nav-home">🏠 Home</a>
+      </div>
+    </div>`;
+}
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function todayStr() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function parseDate(str) { const [y,m,d]=str.split('-').map(Number); return new Date(y,m-1,d); }
+function formatDate(str) { if(!str)return'—'; return parseDate(str).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function formatDateShort(str) { if(!str)return''; return parseDate(str).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function daysUntil(str) { const t=new Date();t.setHours(0,0,0,0);return Math.round((parseDate(str)-t)/86400000); }
+function dueLabel(str) { if(!str)return''; const d=daysUntil(str); if(d<0)return`<span class="due-overdue">${Math.abs(d)}d overdue</span>`; if(d===0)return`<span class="due-today">Due today</span>`; if(d===1)return`<span class="due-soon">Tomorrow</span>`; if(d<=7)return`<span class="due-soon">In ${d} days</span>`; return`<span class="due-normal">${formatDateShort(str)}</span>`; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+let projectsData = [];
+let milestonesData = [];
+</script>
+<script>
+  renderNav('projects');
+  const COLORS=['#f0a030','#3498db','#2ecc71','#9b59b6','#e74c3c','#1abc9c','#e91e63','#ff9800'];
+  let selectedColor=COLORS[1], editingProjectId=null, addingMilestoneToProject=null;
+
+  function buildColorPicker() {
+    document.getElementById('colorPicker').innerHTML=COLORS.map(c=>`<div class="color-swatch${c===selectedColor?' selected':''}" style="background:${c}" onclick="selectColor('${c}')"></div>`).join('');
+  }
+  function selectColor(c) { selectedColor=c; buildColorPicker(); }
+
+  function getMilestones(pid) { return milestonesData.filter(m=>m.project_id===pid); }
+
+  function render() {
+    const el=document.getElementById('projectList');
+    if (!projectsData.length) {
+      el.innerHTML=`<div class="card" style="text-align:center;padding:3rem"><div style="font-size:2.5rem;margin-bottom:0.8rem">🎯</div><div style="font-weight:700;font-size:1rem;margin-bottom:0.4rem">No projects yet</div><div style="color:var(--text-sm);font-size:0.88rem;margin-bottom:1.2rem">Create a project to track milestones and deadlines.</div><button class="btn btn-primary" onclick="openProjectModal()">+ New Project</button></div>`;
+      return;
+    }
+    el.innerHTML=projectsData.map(p=>renderProject(p)).join('');
+  }
+
+  function renderProject(p) {
+    const milestones=getMilestones(p.id), done=milestones.filter(m=>m.done).length, total=milestones.length, pct=total?Math.round((done/total)*100):0, overdue=p.due_date&&daysUntil(p.due_date)<0;
+    return `
+      <div class="project-card" style="border-left-color:${p.color||'var(--primary)'}">
+        <div class="project-header">
+          <div style="width:14px;height:14px;border-radius:50%;background:${p.color||'var(--primary)'};flex-shrink:0;margin-top:4px"></div>
+          <div style="flex:1">
+            <div class="project-name">${esc(p.name)}</div>
+            ${p.description?`<div class="project-desc">${esc(p.description)}</div>`:''}
+            <div class="project-meta">
+              ${p.due_date?`<span style="${overdue?'color:var(--danger);font-weight:700':''}">📅 ${formatDate(p.due_date)}${overdue?' — OVERDUE':''}</span>`:''}
+              <span>${done}/${total} milestones done</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.3rem">
+            <button class="btn-icon" onclick="openProjectModal('${p.id}')" title="Edit">✏️</button>
+            <button class="btn-icon" onclick="deleteProject('${p.id}')" title="Delete">🗑️</button>
+          </div>
+        </div>
+        ${total>0?`<div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${p.color||'var(--primary)'}"></div></div><div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:0.6rem;text-align:right">${pct}% complete</div>`:''}
+        <div class="milestone-list">
+          ${milestones.map(m=>`<div class="milestone-row"><input type="checkbox" class="milestone-cb" ${m.done?'checked':''} onchange="toggleMilestone('${m.id}',this.checked)" /><div style="flex:1"><div class="milestone-text${m.done?' done-text':''}">${esc(m.text)}</div>${m.due_date?`<div class="milestone-due">${dueLabel(m.due_date)}</div>`:''}</div><button class="btn-icon" onclick="deleteMilestone('${m.id}')" title="Delete">✕</button></div>`).join('')}
+          <div style="padding-top:0.6rem"><button class="btn btn-ghost btn-sm" onclick="openMilestoneModal('${p.id}')">+ Add Milestone</button></div>
+        </div>
+      </div>`;
+  }
+
+  function openProjectModal(id) {
+    editingProjectId=id||null;
+    const p=id?projectsData.find(x=>x.id===id):null;
+    selectedColor=p?.color||COLORS[1];
+    document.getElementById('projectModalTitle').textContent=id?'✏️ Edit Project':'🎯 New Project';
+    document.getElementById('projName').value=p?.name||'';
+    document.getElementById('projDesc').value=p?.description||'';
+    document.getElementById('projDue').value=p?.due_date||'';
+    buildColorPicker();
+    document.getElementById('projectModal').style.display='flex';
+    setTimeout(()=>document.getElementById('projName').focus(),50);
+  }
+  function closeProjectModal() { document.getElementById('projectModal').style.display='none'; editingProjectId=null; }
+
+  async function saveProject() {
+    const name=document.getElementById('projName').value.trim();
+    if (!name) { document.getElementById('projName').focus(); return; }
+    const row = {
+      id: editingProjectId||genId(), name,
+      description: document.getElementById('projDesc').value.trim(),
+      due_date: document.getElementById('projDue').value||null,
+      color: selectedColor
+    };
+    if (editingProjectId) {
+      const { error } = await sb.from('projects').update(row).eq('id', editingProjectId);
+      if (error) { console.error(error); return; }
+      const i = projectsData.findIndex(p=>p.id===editingProjectId);
+      if (i !== -1) projectsData[i] = { ...projectsData[i], ...row };
+    } else {
+      const { error } = await sb.from('projects').insert(row);
+      if (error) { console.error(error); return; }
+      projectsData.unshift({ ...row, created_at: new Date().toISOString() });
+    }
+    closeProjectModal(); render();
+  }
+
+  async function deleteProject(id) {
+    if (!confirm('Delete this project and all its milestones?')) return;
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    if (error) { console.error(error); return; }
+    projectsData = projectsData.filter(p=>p.id!==id);
+    milestonesData = milestonesData.filter(m=>m.project_id!==id);
+    render();
+  }
+
+  function openMilestoneModal(projectId) {
+    addingMilestoneToProject=projectId;
+    document.getElementById('msText').value=''; document.getElementById('msDue').value='';
+    document.getElementById('milestoneModal').style.display='flex';
+    setTimeout(()=>document.getElementById('msText').focus(),50);
+  }
+  function closeMilestoneModal() { document.getElementById('milestoneModal').style.display='none'; addingMilestoneToProject=null; }
+
+  async function saveMilestone() {
+    const text=document.getElementById('msText').value.trim();
+    if (!text) { document.getElementById('msText').focus(); return; }
+    const row = { id:genId(), project_id:addingMilestoneToProject, text, due_date:document.getElementById('msDue').value||null, done:false };
+    const { error } = await sb.from('milestones').insert(row);
+    if (error) { console.error(error); return; }
+    milestonesData.push({ ...row, created_at: new Date().toISOString() });
+    closeMilestoneModal(); render();
+  }
+
+  async function toggleMilestone(id, done) {
+    const ms = milestonesData.find(m=>m.id===id);
+    if (!ms) return;
+    ms.done = done;
+    await sb.from('milestones').update({ done }).eq('id', id);
+    render();
+  }
+
+  async function deleteMilestone(id) {
+    const { error } = await sb.from('milestones').delete().eq('id', id);
+    if (error) { console.error(error); return; }
+    milestonesData = milestonesData.filter(m=>m.id!==id);
+    render();
+  }
+
+  document.getElementById('projectModal').addEventListener('click',e=>{if(e.target.id==='projectModal')closeProjectModal();});
+  document.getElementById('milestoneModal').addEventListener('click',e=>{if(e.target.id==='milestoneModal')closeMilestoneModal();});
+  document.getElementById('msText').addEventListener('keydown',e=>{if(e.key==='Enter')saveMilestone();});
+  document.getElementById('projName').addEventListener('keydown',e=>{if(e.key==='Enter')saveProject();});
+
+  (async () => {
+    const [{ data: projects }, { data: milestones }] = await Promise.all([
+      sb.from('projects').select('*').order('created_at', { ascending: false }),
+      sb.from('milestones').select('*').order('created_at', { ascending: true })
+    ]);
+    projectsData = projects || [];
+    milestonesData = milestones || [];
+    render();
+  })();
+</script>
+</body>
+</html>
